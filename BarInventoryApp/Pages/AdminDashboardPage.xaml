@@ -6,7 +6,7 @@
       xmlns:local="clr-namespace:BarInventoryApp.Pages"
       mc:Ignorable="d" 
       Title="Панель администратора"
-      Background="{StaticResource BackgroundBrush}">
+      Background="{DynamicResource BackgroundBrush}">
     <Grid>
         <Button Content="Выход" Click="OnLogoutClick" 
                 Style="{StaticResource SecondaryButton}"
@@ -14,7 +14,8 @@
                 Margin="24" Padding="16,8"/>
         
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="360">
-            <TextBlock Text="👋" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock Text="👋" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,8"
+                       Foreground="{DynamicResource TextBrush}"/>
             <TextBlock Text="Панель администратора" 
                        Style="{StaticResource PageTitle}" 
                        HorizontalAlignment="Center"/>

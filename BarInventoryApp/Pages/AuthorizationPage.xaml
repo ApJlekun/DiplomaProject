@@ -6,13 +6,14 @@
       xmlns:local="clr-namespace:BarInventoryApp.Pages"
       mc:Ignorable="d" 
       Title="Авторизация"
-      Background="{StaticResource BackgroundBrush}">
+      Background="{DynamicResource BackgroundBrush}">
     <Grid>
         <Border Style="{StaticResource Card}" 
                 HorizontalAlignment="Center" VerticalAlignment="Center" 
                 Width="380">
             <StackPanel>
-                <TextBlock Text="🍸" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <TextBlock Text="🍸" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,8"
+                           Foreground="{DynamicResource TextBrush}"/>
                 <TextBlock Text="Bar Inventory" 
                            Style="{StaticResource PageTitle}" 
                            HorizontalAlignment="Center" 
@@ -23,33 +24,29 @@
                            Margin="0,0,0,24"/>
                 
                 <TextBlock Text="Логин" FontSize="13" FontWeight="Medium" 
-                           Foreground="{StaticResource TextBrush}" Margin="0,0,0,6"/>
+                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6"/>
                 <TextBox x:Name="LoginBox" 
                          Text="{Binding Login, UpdateSourceTrigger=PropertyChanged}" 
                          Style="{StaticResource ModernTextBox}"
                          Margin="0,0,0,16"/>
                 
                 <TextBlock Text="Пароль" FontSize="13" FontWeight="Medium" 
-                           Foreground="{StaticResource TextBrush}" Margin="0,0,0,6"/>
+                           Foreground="{DynamicResource TextBrush}" Margin="0,0,0,6"/>
                 <PasswordBox x:Name="PasswordBox"
                              PasswordChanged="PasswordBox_PasswordChanged"
-                             FontSize="14" Padding="12,10" Margin="0,0,0,24">
-                    <PasswordBox.Template>
-                        <ControlTemplate TargetType="PasswordBox">
-                            <Border Background="White" 
-                                    BorderBrush="{StaticResource BorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="6">
-                                <ScrollViewer x:Name="PART_ContentHost" Margin="12,10"/>
-                            </Border>
-                        </ControlTemplate>
-                    </PasswordBox.Template>
-                </PasswordBox>
+                             Style="{StaticResource ModernPasswordBox}"
+                             Margin="0,0,0,24"/>
 
                 <Button Content="Войти" 
                         Command="{Binding LoginCommand}" 
                         Style="{StaticResource PrimaryButton}"
                         IsDefault="True"
+                        HorizontalAlignment="Stretch"
+                        Margin="0,0,0,12"/>
+
+                <Button Content="Выход" 
+                        Click="OnExitClick" 
+                        Style="{StaticResource SecondaryButton}"
                         HorizontalAlignment="Stretch"/>
             </StackPanel>
         </Border>

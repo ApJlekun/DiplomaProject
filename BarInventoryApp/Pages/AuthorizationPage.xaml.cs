@@ -22,5 +22,10 @@ namespace BarInventoryApp.Pages
                 _viewModel.Password = passwordBox.Password;
             }
         }
+
+        private void OnExitClick(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
     }
 }

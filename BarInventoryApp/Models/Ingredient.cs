@@ -26,7 +26,12 @@ public partial class Ingredient
     public string Unit { get; set; } = null!;
 
     /// <summary>
-    /// Коллекция заказов, связанных с данным ингредиентом.
+    /// Идентификатор категории ингредиента.
     /// </summary>
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+    public int CategoryId { get; set; }
+
+    /// <summary>
+    /// Навигационное свойство категории.
+    /// </summary>
+    public virtual Category Category { get; set; } = null!;
 }

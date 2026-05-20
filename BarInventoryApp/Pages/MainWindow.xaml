@@ -5,10 +5,29 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BarInventoryApp.Pages"
         mc:Ignorable="d"
-        Title="Bar Inventory System" Height="720" Width="1200"
+        Title="Bar Inventory System" WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BackgroundBrush}">
+        Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
     <Grid>
         <Frame x:Name="MainFrame" NavigationUIVisibility="Hidden"/>
+        
+        <!-- Floating Theme Toggle Button -->
+        <Button x:Name="ThemeToggleButton" 
+                Content="🌙" 
+                ToolTip="Сменить тему (Светлая / Темная)"
+                Click="OnThemeToggleClick"
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Bottom" 
+                Margin="0,0,32,32"
+                Width="56" Height="56"
+                FontSize="24"
+                Padding="0"
+                Style="{DynamicResource PrimaryButton}">
+            <Button.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="28"/>
+                </Style>
+            </Button.Resources>
+        </Button>
     </Grid>
 </Window>

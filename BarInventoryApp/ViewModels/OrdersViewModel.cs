@@ -1,252 +1,183 @@
-﻿using BarInventoryApp.Constants;
+using BarInventoryApp.Constants;
 using BarInventoryApp.Models;
 using BarInventoryApp.Pages;
 using BarInventoryApp.Services;
 using BarInventoryApp.Utils;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 
-namespace BarInventoryApp.ViewModels;
-
-/// <summary>
-/// ViewModel для страницы управления заказами.
-/// </summary>
-public class OrdersViewModel : INotifyPropertyChanged
+namespace BarInventoryApp.ViewModels
 {
-    #region Поля
-
-    private readonly OrderService _orderService;
-    private readonly IngredientService _ingredientService;
-    private readonly UserService _userService;
-    private readonly ExcelExportService _excelService;
-    private readonly MainViewModel _mainViewModel;
-    private string _filter = string.Empty;
-    private List<Order> _allOrders = new();
-
-    #endregion
-
-    #region Свойства
-
-    /// <summary>
-    /// Коллекция отфильтрованных заказов для отображения.
-    /// </summary>
-    public ObservableCollection<Order> Orders { get; } = new();
-
-    /// <summary>
-    /// Текст фильтра для поиска заказов.
-    /// </summary>
-    public string Filter
+    public class OrdersViewModel : INotifyPropertyChanged
     {
-        get => _filter;
-        set { _filter = value; OnPropertyChanged(); ApplyFilter(); }
-    }
+        private readonly InvoiceService _invoiceService;
+        private readonly IngredientService _ingredientService;
+        private readonly ExcelExportService _excelService;
+        private readonly EmailService _emailService;
+        private readonly MainViewModel _mainViewModel;
+        private Invoice? _selectedInvoice;
+        private string _searchQuery = string.Empty;
+        private List<Invoice> _allInvoices = new();
 
-    /// <summary>
-    /// Выбранный заказ в списке (для привязки выделения в DataGrid).
-    /// </summary>
-    public Order? SelectedItem { get; set; }
+        public ObservableCollection<Invoice> Invoices { get; } = new();
 
-    #endregion
-
-    #region Команды
-
-    /// <summary>
-    /// Команда для добавления нового заказа.
-    /// </summary>
-    public ICommand AddCommand { get; }
-
-    /// <summary>
-    /// Команда для редактирования выбранного заказа.
-    /// </summary>
-    public ICommand EditCommand { get; }
-
-    /// <summary>
-    /// Команда для удаления выбранного заказа.
-    /// </summary>
-    public ICommand DeleteCommand { get; }
-
-    /// <summary>
-    /// Команда для экспорта заказов в Excel.
-    /// </summary>
-    public ICommand ExportCommand { get; }
-
-    #endregion
-
-    #region Конструктор
-
-    /// <summary>
-    /// Инициализирует новый экземпляр класса OrdersViewModel.
-    /// </summary>
-    /// <param name="orderService">Сервис для работы с заказами.</param>
-    /// <param name="ingredientService">Сервис для работы с ингредиентами.</param>
-    /// <param name="userService">Сервис для работы с пользователями.</param>
-    /// <param name="excelService">Сервис для экспорта в Excel.</param>
-    /// <param name="mainViewModel">Главная ViewModel для навигации.</param>
-    public OrdersViewModel(
-        OrderService orderService,
-        IngredientService ingredientService,
-        UserService userService,
-        ExcelExportService excelService,
-        MainViewModel mainViewModel)
-    {
-        _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
-        _ingredientService = ingredientService ?? throw new ArgumentNullException(nameof(ingredientService));
-        _userService = userService ?? throw new ArgumentNullException(nameof(userService));
-        _excelService = excelService ?? throw new ArgumentNullException(nameof(excelService));
-        _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
-
-        AddCommand = new RelayCommand(OnAdd);
-        EditCommand = new RelayCommand(OnEdit);
-        DeleteCommand = new RelayCommand(OnDelete);
-        ExportCommand = new RelayCommand(OnExport);
-
-        LoadOrders();
-    }
-
-    #endregion
-
-    #region Методы
-
-    /// <summary>
-    /// Загружает все заказы из базы данных.
-    /// </summary>
-    private async void LoadOrders()
-    {
-        try
+        public Invoice? SelectedInvoice
         {
-            _allOrders = await _orderService.GetAllWithDetailsAsync();
+            get => _selectedInvoice;
+            set { _selectedInvoice = value; OnPropertyChanged(); }
+        }
+
+        public string SearchQuery
+        {
+            get => _searchQuery;
+            set { _searchQuery = value; OnPropertyChanged(); ApplyFilter(); }
+        }
+
+        public bool IsManagerOrAdmin => Session.CurrentUser?.Role.Name == ApplicationConstants.Roles.Admin || 
+                                        Session.CurrentUser?.Role.Name == ApplicationConstants.Roles.Manager;
+
+        public ICommand AddCommand { get; }
+        public ICommand EditCommand { get; }
+        public ICommand DeleteCommand { get; }
+        public ICommand BackCommand { get; }
+        public ICommand SendEmailCommand { get; }
+
+        public OrdersViewModel(InvoiceService invoiceService, IngredientService ingredientService, ExcelExportService excelService, EmailService emailService, MainViewModel mainViewModel)
+        {
+            _invoiceService = invoiceService;
+            _ingredientService = ingredientService;
+            _excelService = excelService;
+            _emailService = emailService;
+            _mainViewModel = mainViewModel;
+
+            AddCommand = new RelayCommand(OnAdd);
+            EditCommand = new RelayCommand(OnEdit);
+            DeleteCommand = new RelayCommand(OnDelete);
+            BackCommand = new RelayCommand(OnBack);
+            SendEmailCommand = new RelayCommand(OnSendEmail);
+
+            LoadInvoices();
+        }
+
+        private async void LoadInvoices()
+        {
+            _allInvoices = await _invoiceService.GetAllInvoicesAsync();
             ApplyFilter();
         }
-        catch (Exception ex)
+
+        private void ApplyFilter()
         {
-            MessageBox.Show(
-                string.Format(ApplicationConstants.Messages.LoadingOrdersError, ex.Message),
-                "Ошибка",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            var filtered = _allInvoices.Where(i => string.IsNullOrEmpty(SearchQuery) || 
+                                                   i.Id.ToString().Contains(SearchQuery)).ToList();
+            Invoices.Clear();
+            foreach (var item in filtered) Invoices.Add(item);
         }
-    }
 
-    /// <summary>
-    /// Применяет фильтр к списку заказов.
-    /// </summary>
-    private void ApplyFilter()
-    {
-        var filtered = _allOrders
-            .Where(o => string.IsNullOrEmpty(Filter) ||
-                        (o.Ingredient?.Name.Contains(Filter, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                        (o.CreatedByNavigation?.Login.Contains(Filter, StringComparison.OrdinalIgnoreCase) ?? false))
-            .ToList();
-
-        Orders.Clear();
-        foreach (var order in filtered)
+        private void OnAdd()
         {
-            Orders.Add(order);
+            var viewModel = new InvoiceEditViewModel(null, _invoiceService, _ingredientService, _excelService);
+            var dialog = new InvoiceEditDialog(viewModel);
+            viewModel.CloseRequested += () => { dialog.DialogResult = true; dialog.Close(); };
+            if (dialog.ShowDialog() == true) LoadInvoices();
         }
-    }
 
-    /// <summary>
-    /// Обработчик команды добавления нового заказа.
-    /// </summary>
-    private void OnAdd()
-    {
-        var dialog = new OrderEditDialog(null, _orderService, _ingredientService);
-        if (dialog.ShowDialog() == true)
+        private void OnEdit()
         {
-            LoadOrders();
+            if (SelectedInvoice == null) return;
+            var viewModel = new InvoiceEditViewModel(SelectedInvoice, _invoiceService, _ingredientService, _excelService);
+            var dialog = new InvoiceEditDialog(viewModel);
+            viewModel.CloseRequested += () => { dialog.DialogResult = true; dialog.Close(); };
+            if (dialog.ShowDialog() == true) LoadInvoices();
         }
-    }
 
-    /// <summary>
-    /// Обработчик команды редактирования заказа.
-    /// </summary>
-    private void OnEdit()
-    {
-        if (SelectedItem is Order selected)
+        private async void OnDelete()
         {
-            var dialog = new OrderEditDialog(selected, _orderService, _ingredientService);
+            if (SelectedInvoice == null) return;
+            if (SelectedInvoice.Status == "Проведена")
+            {
+                MessageBox.Show("Нельзя удалить проведенную накладную.");
+                return;
+            }
+
+            var res = MessageBox.Show($"Удалить накладную №{SelectedInvoice.Id}?", "Подтверждение", MessageBoxButton.YesNo);
+            if (res == MessageBoxResult.Yes)
+            {
+                await _invoiceService.DeleteInvoiceAsync(SelectedInvoice.Id);
+                LoadInvoices();
+            }
+        }
+
+        private async void OnSendEmail()
+        {
+            if (SelectedInvoice == null)
+            {
+                MessageBox.Show("Выберите накладную для отправки.");
+                return;
+            }
+
+            if (SelectedInvoice.Status == "Проведена")
+            {
+                MessageBox.Show("Нельзя отправить проведенную накладную. Отправка доступна только для не проведенных накладных.");
+                return;
+            }
+
+            var dialog = new SendEmailDialog { Owner = Application.Current.MainWindow };
             if (dialog.ShowDialog() == true)
             {
-                LoadOrders();
-            }
-        }
-        else
-        {
-            MessageBox.Show(ApplicationConstants.Messages.SelectOrderForEdit);
-        }
-    }
-
-    /// <summary>
-    /// Обработчик команды удаления заказа.
-    /// </summary>
-    private async void OnDelete()
-    {
-        if (SelectedItem is Order selected)
-        {
-            var result = MessageBox.Show(
-                string.Format(ApplicationConstants.Messages.DeleteOrderConfirmation, selected.OrderDate.ToString("G")),
-                "Подтверждение",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
-            {
+                string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"Invoice_{SelectedInvoice.Id}.xlsx");
                 try
                 {
-                    await _orderService.DeleteAsync(selected.Id);
-                    LoadOrders();
+                    // Подготовка данных для экспорта
+                    var items = await _invoiceService.GetInvoiceItemsAsync(SelectedInvoice.Id);
+                    var exportData = items.Select(ii => new
+                    {
+                        Ингредиент = ii.Ingredient.Name,
+                        Количество = ii.Quantity,
+                        ЕдИзм = ii.Ingredient.Unit
+                    }).ToList();
+
+                    _excelService.ExportToExcel(exportData, tempPath);
+
+                    await _emailService.SendEmailWithAttachmentAsync(
+                        dialog.RecipientEmail,
+                        $"Накладная №{SelectedInvoice.Id} - Bar Inventory",
+                        $"Здравствуйте!\n\nВо вложении находится накладная №{SelectedInvoice.Id} от {SelectedInvoice.CreatedAt:dd.MM.yyyy HH:mm}.\n\nС уважением,\nBar Inventory System",
+                        tempPath
+                    );
+
+                    MessageBox.Show($"Накладная успешно отправлена на {dialog.RecipientEmail}", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-                catch (Exception ex)
+                catch (System.Exception ex)
                 {
-                    MessageBox.Show(
-                        $"Ошибка удаления заказа: {ex.Message}",
-                        "Ошибка",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    MessageBox.Show($"Ошибка при отправке почты: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally
+                {
+                    if (System.IO.File.Exists(tempPath))
+                    {
+                        try { System.IO.File.Delete(tempPath); } catch { }
+                    }
                 }
             }
         }
-    }
 
-    /// <summary>
-    /// Обработчик команды экспорта заказов в Excel.
-    /// </summary>
-    private void OnExport()
-    {
-        try
+        private void OnBack()
         {
-            _excelService.ExportOrders(_allOrders);
+            var role = Session.CurrentUser?.Role.Name;
+            if (role == ApplicationConstants.Roles.Admin) _mainViewModel.NavigateTo<AdminDashboardPage>();
+            else if (role == ApplicationConstants.Roles.Manager) _mainViewModel.NavigateTo<ManagerDashboardPage>();
+            else _mainViewModel.NavigateTo<AuthorizationPage>();
         }
-        catch (Exception ex)
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
-            MessageBox.Show(
-                $"Ошибка экспорта в Excel: {ex.Message}",
-                "Ошибка",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
-
-    #endregion
-
-    #region События
-
-    /// <summary>
-    /// Событие, возникающее при изменении значения свойства.
-    /// </summary>
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    /// <summary>
-    /// Вызывает событие PropertyChanged.
-    /// </summary>
-    /// <param name="propertyName">Имя измененного свойства.</param>
-    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
-
-    #endregion
 }

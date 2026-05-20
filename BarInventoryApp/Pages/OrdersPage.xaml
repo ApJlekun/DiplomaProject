@@ -3,10 +3,9 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-      xmlns:local="clr-namespace:BarInventoryApp.Pages"
       mc:Ignorable="d" 
-      Title="Заказы на ингредиенты"
-      Background="{StaticResource BackgroundBrush}">
+      Title="Накладные"
+      Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -20,11 +19,8 @@
                 <Button Content="← Назад" Click="OnBackClick" 
                         Style="{StaticResource SecondaryButton}" 
                         Padding="12,8" Margin="0,0,10,0"/>
-                <Button Content="Выход" Click="OnLogoutClick" 
-                        Style="{StaticResource SecondaryButton}" 
-                        Padding="12,8"/>
             </StackPanel>
-            <TextBlock Text="📋 Заказы на ингредиенты" 
+            <TextBlock Text="📑 Накладные (Поступления)" 
                        Style="{StaticResource PageTitle}" 
                        HorizontalAlignment="Center" 
                        VerticalAlignment="Center"
@@ -35,45 +31,59 @@
         <Border Grid.Row="1" Style="{StaticResource Card}" Padding="16" Margin="0,0,0,16">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                    <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" 
+                    <TextBox Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
                              Style="{StaticResource ModernTextBox}"
-                             Width="300"/>
-                    <TextBlock Text="🔍 Поиск" VerticalAlignment="Center" Margin="10,0,0,0" 
-                               FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
+                             Width="300"
+                             ToolTip="Введите номер накладной"/>
+                    <TextBlock Text="🔍 Поиск по номеру" VerticalAlignment="Center" Margin="10,0,0,0" 
+                               FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
-                
+
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="+ Создать заказ" Command="{Binding AddCommand}" 
+                    <Button Content="+ Новая накладная" Command="{Binding AddCommand}"
                             Style="{StaticResource PrimaryButton}"
-                            Margin="0,0,8,0" Padding="16,10"/>
-                    <Button Content="Редактировать" Command="{Binding EditCommand}" 
+                            Margin="0,0,8,0" Padding="16,10"
+                            Visibility="{Binding IsManagerOrAdmin, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <Button Content="Открыть / Редактировать" Command="{Binding EditCommand}"
                             Style="{StaticResource SecondaryButton}"
                             Margin="0,0,8,0" Padding="16,10"/>
-                    <Button Content="Удалить" Command="{Binding DeleteCommand}" 
+                    <Button Content="Удалить" Command="{Binding DeleteCommand}"
                             Style="{StaticResource DangerButton}"
-                            Margin="0,0,8,0" Padding="16,10"/>
-                    <Button Content="Экспорт в Excel" Command="{Binding ExportCommand}" 
+                            Margin="0,0,8,0" Padding="16,10"
+                            Visibility="{Binding IsManagerOrAdmin, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <Button Content="📧 Отправить на почту" Command="{Binding SendEmailCommand}"
                             Style="{StaticResource SecondaryButton}"
-                            Padding="16,10"/>
+                            Padding="16,10"
+                            Visibility="{Binding IsManagerOrAdmin, Converter={StaticResource NullToVisibilityConverter}}"/>
                 </StackPanel>
             </StackPanel>
         </Border>
 
-        <!-- Таблица -->
+        <!-- Таблица накладных -->
         <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0">
-            <DataGrid x:Name="OrdersGrid"
-                      ItemsSource="{Binding Orders}"
-                      SelectedItem="{Binding SelectedItem}"
+            <DataGrid ItemsSource="{Binding Invoices}"
+                      SelectedItem="{Binding SelectedInvoice}"
                       Style="{StaticResource ModernDataGrid}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
-                      BorderThickness="0">
+                      BorderThickness="0"
+                      MouseDoubleClick="OnMouseDoubleClick">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ИНГРЕДИЕНТ" Binding="{Binding Ingredient.Name}" Width="*"/>
-                    <DataGridTextColumn Header="КОЛИЧЕСТВО" Binding="{Binding Quantity, StringFormat=N2}" Width="110"/>
-                    <DataGridTextColumn Header="ЕД." Binding="{Binding Ingredient.Unit}" Width="70"/>
-                    <DataGridTextColumn Header="ДАТА" Binding="{Binding OrderDate, StringFormat='dd.MM.yyyy HH:mm'}" Width="150"/>
-                    <DataGridTextColumn Header="АВТОР" Binding="{Binding CreatedByNavigation.Login}" Width="130"/>
+                    <DataGridTextColumn Header="№" Binding="{Binding Id}" Width="60"/>
+                    <DataGridTextColumn Header="ДАТА" Binding="{Binding CreatedAt, StringFormat={}{0:dd.MM.yyyy HH:mm}}" Width="150"/>
+                    <DataGridTextColumn Header="СОЗДАЛ" Binding="{Binding CreatedByNavigation.Login}" Width="*"/>
+                    <DataGridTextColumn Header="СТАТУС" Binding="{Binding Status}" Width="150">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <Trigger Property="Text" Value="Проведена">
+                                        <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

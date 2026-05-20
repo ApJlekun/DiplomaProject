@@ -1,0 +1,24 @@
+<Window x:Class="BarInventoryApp.Pages.SendEmailDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Отправить на почту" SizeToContent="Height" Width="400"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="{DynamicResource BackgroundBrush}">
+    <Border Style="{StaticResource Card}" Margin="20" VerticalAlignment="Top">
+        <StackPanel>
+            <TextBlock Text="📧 Отправка накладной" Style="{StaticResource PageTitle}" FontSize="20" Margin="0,0,0,16"/>
+            
+            <TextBlock Text="Email получателя" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="EmailTextBox" Style="{StaticResource ModernTextBox}" Margin="0,0,0,24"/>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Content="Отмена" Click="OnCancelClick" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <Button Grid.Column="1" Content="Отправить" Click="OnSendClick" Style="{StaticResource PrimaryButton}"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

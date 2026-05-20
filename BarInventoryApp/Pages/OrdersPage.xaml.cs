@@ -1,68 +1,32 @@
-﻿using BarInventoryApp.Constants;
-using BarInventoryApp.Utils;
 using BarInventoryApp.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
-namespace BarInventoryApp.Pages;
-
-/// <summary>
-/// Страница управления заказами.
-/// </summary>
-public partial class OrdersPage : Page
+namespace BarInventoryApp.Pages
 {
-    #region Поля
-
-    private readonly MainViewModel _mainViewModel;
-
-    #endregion
-
-    #region Конструктор
-
-    /// <summary>
-    /// Инициализирует новый экземпляр класса OrdersPage.
-    /// </summary>
-    /// <param name="viewModel">ViewModel для страницы заказов.</param>
-    /// <param name="mainViewModel">Главная ViewModel для навигации.</param>
-    public OrdersPage(OrdersViewModel viewModel, MainViewModel mainViewModel)
+    public partial class OrdersPage : Page
     {
-        InitializeComponent();
-        DataContext = viewModel;
-        _mainViewModel = mainViewModel;
-    }
-
-    #endregion
-
-    #region Обработчики событий
-
-    /// <summary>
-    /// Обработчик нажатия кнопки "Назад".
-    /// </summary>
-    private void OnBackClick(object sender, RoutedEventArgs e)
-    {
-        var role = Session.CurrentUser?.Role.Name;
-        switch (role)
+        public OrdersPage(OrdersViewModel viewModel)
         {
-            case ApplicationConstants.Roles.Admin:
-                _mainViewModel.NavigateTo<AdminDashboardPage>();
-                break;
-            case ApplicationConstants.Roles.Manager:
-                _mainViewModel.NavigateTo<ManagerDashboardPage>();
-                break;
-            default:
-                _mainViewModel.NavigateTo<AuthorizationPage>();
-                break;
+            InitializeComponent();
+            DataContext = viewModel;
+        }
+
+        private void OnBackClick(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is OrdersViewModel viewModel)
+            {
+                viewModel.BackCommand.Execute(null);
+            }
+        }
+
+        private void OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is OrdersViewModel viewModel)
+            {
+                viewModel.EditCommand?.Execute(null);
+            }
         }
     }
-
-    /// <summary>
-    /// Обработчик нажатия кнопки "Выход".
-    /// </summary>
-    private void OnLogoutClick(object sender, RoutedEventArgs e)
-    {
-        Session.CurrentUser = null;
-        _mainViewModel.NavigateTo<AuthorizationPage>();
-    }
-
-    #endregion
 }

@@ -28,11 +28,6 @@ public partial class User
     public int RoleId { get; set; }
 
     /// <summary>
-    /// Коллекция заказов, созданных данным пользователем.
-    /// </summary>
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-
-    /// <summary>
     /// Роль пользователя в системе (Barmen, Manager, Admin).
     /// </summary>
     public virtual Role Role { get; set; } = null!;

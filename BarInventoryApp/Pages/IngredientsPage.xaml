@@ -3,10 +3,9 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-      xmlns:local="clr-namespace:BarInventoryApp.Pages"
       mc:Ignorable="d" 
       Title="Ингредиенты"
-      Background="{StaticResource BackgroundBrush}">
+      Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -24,7 +23,7 @@
                         Style="{StaticResource SecondaryButton}" 
                         Padding="12,8"/>
             </StackPanel>
-            <TextBlock Text="📦 Остатки ингредиентов" 
+            <TextBlock Text="📦 Категории ингредиентов" 
                        Style="{StaticResource PageTitle}" 
                        HorizontalAlignment="Center" 
                        VerticalAlignment="Center"
@@ -35,16 +34,31 @@
         <Border Grid.Row="1" Style="{StaticResource Card}" Padding="16" Margin="0,0,0,16">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                    <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" 
-                             Style="{StaticResource ModernTextBox}"
-                             Width="300" 
-                             TextChanged="SearchBox_TextChanged"/>
-                    <TextBlock Text="🔍 Поиск" VerticalAlignment="Center" Margin="10,0,0,0" 
-                               FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <ComboBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" 
+                              ItemsSource="{Binding Categories}"
+                              DisplayMemberPath="Name"
+                              IsEditable="True"
+                              StaysOpenOnEdit="True"
+                              IsTextSearchEnabled="False"
+                              Width="300"
+                              Height="35"
+                              FontSize="14"
+                              Style="{StaticResource ModernComboBox}"
+                              VerticalContentAlignment="Center"/>
+                    <TextBlock Text="🔍 Поиск категорий" VerticalAlignment="Center" Margin="10,0,0,0" 
+                               FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
                 
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="+ Добавить" Command="{Binding AddCommand}"
+                    <Button Content="🧾 Чек" Command="{Binding CreateReceiptCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="0,0,8,0" Padding="16,10"
+                            Visibility="{Binding CreateReceiptCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <Button Content="📜 История чеков" Command="{Binding ReceiptHistoryCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="0,0,8,0" Padding="16,10"
+                            Visibility="{Binding ReceiptHistoryCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <Button Content="+ Новый ингредиент" Command="{Binding AddCommand}"
                             Style="{StaticResource PrimaryButton}"
                             Margin="0,0,8,0" Padding="16,10"
                             Visibility="{Binding AddCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
@@ -52,31 +66,21 @@
                             Style="{StaticResource SecondaryButton}"
                             Margin="0,0,8,0" Padding="16,10"
                             Visibility="{Binding ImportCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    <Button Content="Редактировать" Command="{Binding EditCommand}"
-                            Style="{StaticResource SecondaryButton}"
-                            Margin="0,0,8,0" Padding="16,10"
-                            Visibility="{Binding EditCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    <Button Content="Удалить" Command="{Binding DeleteCommand}"
-                            Style="{StaticResource DangerButton}"
-                            Padding="16,10"
-                            Visibility="{Binding DeleteCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
                 </StackPanel>
             </StackPanel>
         </Border>
 
-        <!-- Таблица -->
+        <!-- Таблица категорий -->
         <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0">
-            <DataGrid x:Name="IngredientsGrid"
-                      ItemsSource="{Binding Ingredients}"
-                      SelectedItem="{Binding SelectedItem}"
+            <DataGrid ItemsSource="{Binding Categories}"
+                      SelectedItem="{Binding SelectedCategory}"
                       Style="{StaticResource ModernDataGrid}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
-                      BorderThickness="0">
+                      BorderThickness="0"
+                      MouseDoubleClick="OnMouseDoubleClick">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="НАЗВАНИЕ" Binding="{Binding Name}" Width="*"/>
-                    <DataGridTextColumn Header="КОЛИЧЕСТВО" Binding="{Binding Quantity, StringFormat=N2}" Width="120"/>
-                    <DataGridTextColumn Header="ЕД. ИЗМ." Binding="{Binding Unit}" Width="100"/>
+                    <DataGridTextColumn Header="КАТЕГОРИЯ" Binding="{Binding Name}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

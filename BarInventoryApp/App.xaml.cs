@@ -47,10 +47,12 @@ namespace BarInventoryApp
 
                     services.AddScoped<AuthService>();
                     services.AddScoped<IngredientService>();
-                    services.AddScoped<OrderService>();
+                    services.AddScoped<InvoiceService>();
                     services.AddScoped<UserService>();
                     services.AddScoped<ExcelExportService>();
                     services.AddScoped<ExcelImportService>();
+                    services.AddScoped<ReceiptService>();
+                    services.AddScoped<EmailService>();
 
                     services.AddDbContext<AppDbContext>(options =>
                         options.UseSqlServer(context.Configuration.GetConnectionString("DefaultConnection")));

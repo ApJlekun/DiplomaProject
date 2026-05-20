@@ -30,9 +30,19 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<Ingredient> Ingredients { get; set; }
 
     /// <summary>
-    /// Набор данных заказов.
+    /// Набор данных категорий.
     /// </summary>
-    public virtual DbSet<Order> Orders { get; set; }
+    public virtual DbSet<Category> Categories { get; set; }
+
+    /// <summary>
+    /// Набор данных накладных.
+    /// </summary>
+    public virtual DbSet<Invoice> Invoices { get; set; }
+
+    /// <summary>
+    /// Набор данных позиций накладных.
+    /// </summary>
+    public virtual DbSet<InvoiceItem> InvoiceItems { get; set; }
 
     /// <summary>
     /// Набор данных ролей.
@@ -43,6 +53,16 @@ public partial class AppDbContext : DbContext
     /// Набор данных пользователей.
     /// </summary>
     public virtual DbSet<User> Users { get; set; }
+
+    /// <summary>
+    /// Набор данных чеков.
+    /// </summary>
+    public virtual DbSet<Receipt> Receipts { get; set; }
+
+    /// <summary>
+    /// Набор данных элементов чеков.
+    /// </summary>
+    public virtual DbSet<ReceiptItem> ReceiptItems { get; set; }
 
     /// <summary>
     /// Настройка подключения к базе данных.
@@ -67,6 +87,13 @@ public partial class AppDbContext : DbContext
     /// <param name="modelBuilder">Построитель модели данных.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Конфигурация сущности Category
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(100);
+        });
+
         // Конфигурация сущности Ingredient
         modelBuilder.Entity<Ingredient>(entity =>
         {
@@ -75,25 +102,41 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Quantity).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Unit).HasMaxLength(20);
+
+            entity.HasOne(d => d.Category).WithMany(p => p.Ingredients)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
         });
 
-        // Конфигурация сущности Order
-        modelBuilder.Entity<Order>(entity =>
+        // Конфигурация сущности Invoice
+        modelBuilder.Entity<Invoice>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Orders__3214EC071A00A7E5");
+            entity.HasKey(e => e.Id);
 
-            entity.Property(e => e.OrderDate).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Status).HasMaxLength(50);
 
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.Orders)
+            entity.HasOne(d => d.CreatedByNavigation).WithMany()
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Orders__CreatedB__440B1D61");
+                .HasConstraintName("FK_Invoices_Users");
+        });
 
-            entity.HasOne(d => d.Ingredient).WithMany(p => p.Orders)
+        // Конфигурация сущности InvoiceItem
+        modelBuilder.Entity<InvoiceItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.Invoice).WithMany(p => p.InvoiceItems)
+                .HasForeignKey(d => d.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_InvoiceItems_Invoices");
+
+            entity.HasOne(d => d.Ingredient).WithMany()
                 .HasForeignKey(d => d.IngredientId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Orders__Ingredie__412EB0B6");
+                .HasConstraintName("FK_InvoiceItems_Ingredients");
         });
 
         // Конфигурация сущности Role
@@ -120,6 +163,35 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.RoleId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Users__RoleId__3B75D760");
+        });
+
+        // Конфигурация сущности Receipt
+        modelBuilder.Entity<Receipt>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Receipts_Users");
+        });
+
+        // Конфигурация сущности ReceiptItem
+        modelBuilder.Entity<ReceiptItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.Receipt).WithMany(p => p.ReceiptItems)
+                .HasForeignKey(d => d.ReceiptId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_ReceiptItems_Receipts");
+
+            entity.HasOne(d => d.Ingredient).WithMany()
+                .HasForeignKey(d => d.IngredientId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ReceiptItems_Ingredients");
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -1,0 +1,49 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Light Theme Palette (Official, Bootstrap-like) -->
+    
+    <!-- Primary Colors -->
+    <Color x:Key="PrimaryColor">#0D6EFD</Color> <!-- Bootstrap Primary Blue -->
+    <Color x:Key="PrimaryHoverColor">#0B5ED7</Color>
+    <Color x:Key="AccentColor">#0D6EFD</Color>
+
+    <!-- Structural Colors -->
+    <Color x:Key="BackgroundColor">#F8F9FA</Color> <!-- Bootstrap Light -->
+    <Color x:Key="CardColor">#FFFFFF</Color>
+    <Color x:Key="BorderColor">#DEE2E6</Color>
+    
+    <!-- Shadow Color -->
+    <Color x:Key="ShadowColor">#212529</Color>
+
+    <!-- Text Colors -->
+    <Color x:Key="TextColor">#212529</Color> <!-- Bootstrap Dark -->
+    <Color x:Key="TextSecondaryColor">#6C757D</Color> <!-- Bootstrap Secondary -->
+
+    <!-- Status Colors -->
+    <Color x:Key="DangerColor">#DC3545</Color> <!-- Bootstrap Danger -->
+    <Color x:Key="DangerHoverColor">#BB2D3B</Color>
+    <Color x:Key="SuccessColor">#198754</Color> <!-- Bootstrap Success -->
+
+    <!-- Component specific background colors -->
+    <Color x:Key="ControlBackgroundColor">#FFFFFF</Color>
+    <Color x:Key="GridHeaderBackgroundColor">#F8F9FA</Color>
+    <Color x:Key="GridAltRowBackgroundColor">#F8F9FA</Color>
+    <Color x:Key="GridSelectedBackgroundColor">#CFE2FF</Color> <!-- Light blue -->
+
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{DynamicResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{DynamicResource PrimaryHoverColor}"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource AccentColor}"/>
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{DynamicResource BackgroundColor}"/>
+    <SolidColorBrush x:Key="CardBrush" Color="{DynamicResource CardColor}"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="{DynamicResource BorderColor}"/>
+    <SolidColorBrush x:Key="TextBrush" Color="{DynamicResource TextColor}"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{DynamicResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="{DynamicResource DangerColor}"/>
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="{DynamicResource DangerHoverColor}"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="{DynamicResource SuccessColor}"/>
+    <SolidColorBrush x:Key="ControlBackgroundBrush" Color="{DynamicResource ControlBackgroundColor}"/>
+    <SolidColorBrush x:Key="GridHeaderBackgroundBrush" Color="{DynamicResource GridHeaderBackgroundColor}"/>
+    <SolidColorBrush x:Key="GridAltRowBackgroundBrush" Color="{DynamicResource GridAltRowBackgroundColor}"/>
+    <SolidColorBrush x:Key="GridSelectedBackgroundBrush" Color="{DynamicResource GridSelectedBackgroundColor}"/>
+</ResourceDictionary>

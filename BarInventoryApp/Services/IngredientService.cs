@@ -36,7 +36,29 @@ public class IngredientService
     /// <returns>Список всех ингредиентов.</returns>
     public async Task<List<Ingredient>> GetAllAsync()
     {
-        return await _context.Ingredients.ToListAsync();
+        return await _context.Ingredients.Include(i => i.Category).ToListAsync();
+    }
+
+    /// <summary>
+    /// Получает все категории из базы данных.
+    /// </summary>
+    /// <returns>Список всех категорий.</returns>
+    public async Task<List<Category>> GetCategoriesAsync()
+    {
+        return await _context.Categories.ToListAsync();
+    }
+
+    /// <summary>
+    /// Добавляет новую категорию.
+    /// </summary>
+    /// <param name="category">Категория для добавления.</param>
+    /// <returns>Добавленная категория.</returns>
+    public async Task<Category> AddCategoryAsync(Category category)
+    {
+        if (category == null) throw new ArgumentNullException(nameof(category));
+        _context.Categories.Add(category);
+        await _context.SaveChangesAsync();
+        return category;
     }
 
     /// <summary>
@@ -81,6 +103,22 @@ public class IngredientService
         _context.Ingredients.Remove(ingredient);
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    /// <summary>
+    /// Поиск ингредиентов по названию.
+    /// </summary>
+    /// <param name="term">Текст для поиска.</param>
+    /// <returns>Список найденных ингредиентов.</returns>
+    public async Task<List<Ingredient>> SearchAsync(string term)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+            return new List<Ingredient>();
+
+        return await _context.Ingredients
+            .Include(i => i.Category)
+            .Where(i => i.Name.Contains(term))
+            .ToListAsync();
     }
 
     #endregion

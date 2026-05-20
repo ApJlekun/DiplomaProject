@@ -1,4 +1,4 @@
-﻿using BarInventoryApp.Constants;
+using BarInventoryApp.Constants;
 using BarInventoryApp.Models;
 using BarInventoryApp.Pages;
 using BarInventoryApp.Services;
@@ -7,35 +7,38 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace BarInventoryApp.ViewModels;
 
 /// <summary>
-/// ViewModel для страницы управления ингредиентами.
+/// ViewModel для страницы управления ингредиентами (теперь сгруппированными по категориям).
 /// </summary>
 public class IngredientsViewModel : INotifyPropertyChanged
 {
     #region Поля
 
     private readonly IngredientService _service;
+    private readonly ReceiptService _receiptService;
     private readonly MainViewModel _mainViewModel;
     private readonly IServiceProvider _serviceProvider;
     private readonly ExcelImportService _importService;
     private string _filter = string.Empty;
-    private List<Ingredient> _allIngredients = new();
+    private List<Category> _allCategories = new();
+    private Category? _selectedCategory;
 
     #endregion
 
     #region Свойства
 
     /// <summary>
-    /// Коллекция отфильтрованных ингредиентов для отображения.
+    /// Коллекция отфильтрованных категорий для отображения.
     /// </summary>
-    public ObservableCollection<Ingredient> Ingredients { get; } = new();
+    public ObservableCollection<Category> Categories { get; } = new();
 
     /// <summary>
-    /// Текст фильтра для поиска ингредиентов.
+    /// Текст фильтра для поиска категорий.
     /// </summary>
     public string Filter
     {
@@ -44,54 +47,41 @@ public class IngredientsViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Выбранный ингредиент в списке (для привязки выделения в DataGrid).
+    /// Выбранная категория в списке.
     /// </summary>
-    public Ingredient? SelectedItem { get; set; }
+    public Category? SelectedCategory
+    {
+        get => _selectedCategory;
+        set { _selectedCategory = value; OnPropertyChanged(); }
+    }
 
     #endregion
 
     #region Команды
 
-    /// <summary>
-    /// Команда для добавления нового ингредиента.
-    /// </summary>
     public ICommand? AddCommand { get; }
-
-    /// <summary>
-    /// Команда для редактирования выбранного ингредиента.
-    /// </summary>
     public ICommand? EditCommand { get; }
-
-    /// <summary>
-    /// Команда для удаления выбранного ингредиента.
-    /// </summary>
     public ICommand? DeleteCommand { get; }
-
-    /// <summary>
-    /// Команда для импорта ингредиентов из Excel.
-    /// </summary>
     public ICommand? ImportCommand { get; }
+    public ICommand? CreateReceiptCommand { get; }
+    public ICommand? ReceiptHistoryCommand { get; }
+    public ICommand? OpenCategoryCommand { get; }
 
     #endregion
 
     #region Конструктор
 
-    /// <summary>
-    /// Инициализирует новый экземпляр класса IngredientsViewModel.
-    /// </summary>
-    /// <param name="service">Сервис для работы с ингредиентами.</param>
-    /// <param name="mainViewModel">Главная ViewModel для навигации.</param>
-    /// <param name="serviceProvider">Провайдер сервисов.</param>
-    /// <param name="importService">Сервис для импорта из Excel.</param>
-    public IngredientsViewModel(IngredientService service, MainViewModel mainViewModel, IServiceProvider serviceProvider, ExcelImportService importService)
+    public IngredientsViewModel(IngredientService service, ReceiptService receiptService, MainViewModel mainViewModel, IServiceProvider serviceProvider, ExcelImportService importService)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
+        _receiptService = receiptService ?? throw new ArgumentNullException(nameof(receiptService));
         _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _importService = importService ?? throw new ArgumentNullException(nameof(importService));
 
-        // Команды доступны только администраторам
         var role = Session.CurrentUser?.Role.Name;
+        bool isManagerOrAdmin = role == ApplicationConstants.Roles.Admin || role == ApplicationConstants.Roles.Manager;
+
         if (role == ApplicationConstants.Roles.Admin)
         {
             AddCommand = new RelayCommand(OnAdd);
@@ -100,191 +90,160 @@ public class IngredientsViewModel : INotifyPropertyChanged
             ImportCommand = new RelayCommand(OnImport);
         }
 
-        LoadIngredients();
+        if (isManagerOrAdmin)
+        {
+            CreateReceiptCommand = new RelayCommand(OnCreateReceipt);
+            ReceiptHistoryCommand = new RelayCommand(OnReceiptHistory);
+        }
+
+        OpenCategoryCommand = new RelayCommand(OnOpenCategory);
+
+        LoadData();
     }
 
     #endregion
 
     #region Методы
 
-    /// <summary>
-    /// Загружает все ингредиенты из базы данных.
-    /// </summary>
-    private async void LoadIngredients()
+    private async void LoadData()
     {
         try
         {
-            _allIngredients = await _service.GetAllAsync();
+            _allCategories = await _service.GetCategoriesAsync();
             ApplyFilter();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                string.Format(ApplicationConstants.Messages.LoadingIngredientsError, ex.Message),
-                "Ошибка",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            MessageBox.Show($"Ошибка загрузки данных: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
-    /// <summary>
-    /// Применяет фильтр к списку ингредиентов.
-    /// </summary>
     private void ApplyFilter()
     {
-        var filtered = _allIngredients
-            .Where(i => string.IsNullOrEmpty(Filter) ||
-                        i.Name.Contains(Filter, StringComparison.OrdinalIgnoreCase))
+        var filtered = _allCategories
+            .Where(c => string.IsNullOrEmpty(Filter) ||
+                        c.Name.Contains(Filter, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        Ingredients.Clear();
-        foreach (var ingredient in filtered)
+        Categories.Clear();
+        foreach (var category in filtered)
         {
-            Ingredients.Add(ingredient);
+            Categories.Add(category);
         }
     }
 
-    /// <summary>
-    /// Обработчик команды добавления нового ингредиента.
-    /// </summary>
+    private async void OnOpenCategory()
+    {
+        if (SelectedCategory == null) return;
+
+        // Загружаем ингредиенты этой категории
+        var allIngredients = await _service.GetAllAsync();
+        var categoryIngredients = allIngredients.Where(i => i.CategoryId == SelectedCategory.Id).ToList();
+
+        var viewModel = new CategoryIngredientsViewModel(SelectedCategory.Name, categoryIngredients);
+        var dialog = new CategoryIngredientsDialog(viewModel);
+        dialog.ShowDialog();
+    }
+
+    private void OnCreateReceipt()
+    {
+        var viewModel = new CreateReceiptViewModel(_service, _receiptService);
+        var dialog = new CreateReceiptDialog(viewModel);
+        dialog.ShowDialog();
+        LoadData(); // На всякий случай обновляем (хотя количество в диалоге категории)
+    }
+
+    private void OnReceiptHistory()
+    {
+        var viewModel = new ReceiptHistoryViewModel(_receiptService);
+        var dialog = new ReceiptHistoryDialog(viewModel);
+        dialog.ShowDialog();
+    }
+
     private void OnAdd()
     {
         var dialog = new IngredientEditDialog(null, _service);
-        if (dialog.ShowDialog() == true)
-        {
-            LoadIngredients();
-        }
+        if (dialog.ShowDialog() == true) LoadData();
     }
 
-    /// <summary>
-    /// Обработчик команды редактирования ингредиента.
-    /// </summary>
     private void OnEdit()
     {
-        if (SelectedItem is Ingredient selected)
-        {
-            var dialog = new IngredientEditDialog(selected, _service);
-            if (dialog.ShowDialog() == true)
-            {
-                LoadIngredients();
-            }
-        }
-        else
-        {
-            MessageBox.Show(ApplicationConstants.Messages.SelectIngredientForEdit);
-        }
+        MessageBox.Show("Для редактирования ингредиента откройте соответствующую категорию двойным кликом (функционал в разработке) или используйте поиск.");
+        // В текущей реализации по категориям редактирование усложнено, 
+        // обычно оно делается через поиск или внутри списка категории.
     }
 
-    /// <summary>
-    /// Обработчик команды удаления ингредиента.
-    /// </summary>
-    private async void OnDelete()
+    private void OnDelete()
     {
-        if (SelectedItem is Ingredient selected)
-        {
-            var result = MessageBox.Show(
-                string.Format(ApplicationConstants.Messages.DeleteIngredientConfirmation, selected.Name),
-                "Подтверждение",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    await _service.DeleteAsync(selected.Id);
-                    LoadIngredients();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(
-                        $"Ошибка удаления ингредиента: {ex.Message}",
-                        "Ошибка",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-                }
-            }
-        }
+        MessageBox.Show("Удаление ингредиентов производится из списка внутри категории.");
     }
 
-    /// <summary>
-    /// Обработчик команды импорта ингредиентов из Excel.
-    /// </summary>
     private async void OnImport()
     {
         try
         {
-            // Показываем инструкции по импорту
             _importService.ShowImportInstructions();
-
-            // Импортируем данные из файла
             var importedIngredients = _importService.ImportIngredients();
-            if (importedIngredients == null || importedIngredients.Count == 0)
-                return;
+            if (importedIngredients == null || importedIngredients.Count == 0) return;
 
             int addedCount = 0;
             int updatedCount = 0;
 
-            // Обрабатываем каждый импортированный ингредиент
+            var allIngredients = await _service.GetAllAsync();
+            var allCategories = await _service.GetCategoriesAsync();
+
             foreach (var importedIngredient in importedIngredients)
             {
-                // Ищем существующий ингредиент с таким же названием
-                var existingIngredient = _allIngredients.FirstOrDefault(i =>
+                var categoryName = importedIngredient.Category?.Name ?? "Без категории";
+                var category = allCategories.FirstOrDefault(c => c.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase));
+                
+                if (category == null)
+                {
+                    category = await _service.AddCategoryAsync(new Category { Name = categoryName });
+                    allCategories.Add(category);
+                }
+
+                importedIngredient.CategoryId = category.Id;
+                importedIngredient.Category = null!; // Avoid EF tracking issues with new instances
+
+                var existingIngredient = allIngredients.FirstOrDefault(i =>
                     i.Name.Equals(importedIngredient.Name, StringComparison.OrdinalIgnoreCase));
 
                 if (existingIngredient != null)
                 {
-                    // Обновляем существующий
                     existingIngredient.Quantity = importedIngredient.Quantity;
                     existingIngredient.Unit = importedIngredient.Unit;
+                    existingIngredient.CategoryId = category.Id;
                     await _service.UpdateAsync(existingIngredient);
                     updatedCount++;
                 }
                 else
                 {
-                    // Добавляем новый
                     await _service.AddAsync(importedIngredient);
                     addedCount++;
                 }
             }
 
-            // Перезагружаем список
-            LoadIngredients();
-
-            // Показываем результат
-            MessageBox.Show(
-                $"Импорт завершен успешно!\nДобавлено: {addedCount}\nОбновлено: {updatedCount}",
-                "Успех",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            LoadData();
+            MessageBox.Show($"Импорт завершен!\nДобавлено: {addedCount}\nОбновлено: {updatedCount}", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                $"Ошибка импорта: {ex.Message}",
-                "Ошибка",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            MessageBox.Show($"Ошибка импорта: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     #endregion
 
-    #region События
-
-    /// <summary>
-    /// Событие, возникающее при изменении значения свойства.
-    /// </summary>
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>
-    /// Вызывает событие PropertyChanged.
+    /// Переходит на указанную страницу через MainViewModel.
     /// </summary>
-    /// <param name="propertyName">Имя измененного свойства.</param>
+    public void NavigateTo<T>() where T : Page => _mainViewModel.NavigateTo<T>();
+
     protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-
-    #endregion
 }
