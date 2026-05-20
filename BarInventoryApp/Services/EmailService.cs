@@ -21,13 +21,20 @@ namespace BarInventoryApp.Services
             var senderEmail = _configuration["SmtpSettings:SenderEmail"];
             var senderPassword = _configuration["SmtpSettings:SenderPassword"];
 
+            // Оптимизация сетевых подключений для предотвращения задержек
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+            ServicePointManager.DefaultConnectionLimit = 10;
+
             using var client = new SmtpClient(smtpServer, smtpPort)
             {
                 Credentials = new NetworkCredential(senderEmail, senderPassword),
-                EnableSsl = true
+                EnableSsl = true,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,
+                Timeout = 100000 
             };
 
-            var mailMessage = new MailMessage
+            using var mailMessage = new MailMessage
             {
                 From = new MailAddress(senderEmail!),
                 Subject = subject,
@@ -38,10 +45,16 @@ namespace BarInventoryApp.Services
 
             if (!string.IsNullOrEmpty(attachmentPath))
             {
-                mailMessage.Attachments.Add(new Attachment(attachmentPath));
+                // Используем FileStream для гарантии, что файл не занят
+                using var fileStream = new System.IO.FileStream(attachmentPath, System.IO.FileMode.Open, System.IO.FileAccess.Read);
+                mailMessage.Attachments.Add(new Attachment(fileStream, System.IO.Path.GetFileName(attachmentPath)));
+                
+                await Task.Run(() => client.Send(mailMessage));
             }
-
-            await client.SendMailAsync(mailMessage);
+            else
+            {
+                await Task.Run(() => client.Send(mailMessage));
+            }
         }
     }
 }

@@ -132,6 +132,8 @@ namespace BarInventoryApp.ViewModels
                 string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"Invoice_{SelectedInvoice.Id}.xlsx");
                 try
                 {
+                    System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+
                     // Подготовка данных для экспорта
                     var items = await _invoiceService.GetInvoiceItemsAsync(SelectedInvoice.Id);
                     var exportData = items.Select(ii => new
@@ -150,14 +152,17 @@ namespace BarInventoryApp.ViewModels
                         tempPath
                     );
 
+                    System.Windows.Input.Mouse.OverrideCursor = null;
                     MessageBox.Show($"Накладная успешно отправлена на {dialog.RecipientEmail}", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (System.Exception ex)
                 {
+                    System.Windows.Input.Mouse.OverrideCursor = null;
                     MessageBox.Show($"Ошибка при отправке почты: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 finally
                 {
+                    System.Windows.Input.Mouse.OverrideCursor = null;
                     if (System.IO.File.Exists(tempPath))
                     {
                         try { System.IO.File.Delete(tempPath); } catch { }
