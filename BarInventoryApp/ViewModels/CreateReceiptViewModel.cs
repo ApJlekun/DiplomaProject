@@ -15,12 +15,13 @@ namespace BarInventoryApp.ViewModels
     {
         private readonly IngredientService _ingredientService;
         private readonly ReceiptService _receiptService;
+        private readonly CocktailService _cocktailService;
         private string _searchText = string.Empty;
         private decimal _quantity;
-        private Ingredient? _selectedIngredient;
+        private SearchItem? _selectedItem;
         private bool _isUpdating;
 
-        public ObservableCollection<Ingredient> FoundIngredients { get; } = new();
+        public ObservableCollection<SearchItem> FoundItems { get; } = new();
         public ObservableCollection<ReceiptItemViewModel> ReceiptItems { get; } = new();
 
         public string SearchText
@@ -34,10 +35,9 @@ namespace BarInventoryApp.ViewModels
                 
                 if (!_isUpdating)
                 {
-                    // Если пользователь начал печатать что-то новое, сбрасываем выбор
-                    _selectedIngredient = null;
-                    OnPropertyChanged(nameof(SelectedIngredient));
-                    SearchIngredients();
+                    _selectedItem = null;
+                    OnPropertyChanged(nameof(SelectedItem));
+                    SearchItems();
                 }
             }
         }
@@ -48,26 +48,24 @@ namespace BarInventoryApp.ViewModels
             set { _quantity = value; OnPropertyChanged(); }
         }
 
-        public Ingredient? SelectedIngredient
+        public SearchItem? SelectedItem
         {
-            get => _selectedIngredient;
+            get => _selectedItem;
             set 
             { 
                 if (_isUpdating) return;
 
-                // ЗАЩИТА: Если WPF пытается сбросить выбор в null при скрытии списка,
-                // но текст в поле все еще совпадает с текущим выбором — игнорируем сброс.
-                if (value == null && _selectedIngredient != null && _searchText == _selectedIngredient.Name)
+                if (value == null && _selectedItem != null && _searchText == _selectedItem.Name)
                 {
                     return;
                 }
                 
-                _selectedIngredient = value; 
-                if (_selectedIngredient != null)
+                _selectedItem = value; 
+                if (_selectedItem != null)
                 {
                     _isUpdating = true;
-                    SearchText = _selectedIngredient.Name;
-                    FoundIngredients.Clear();
+                    SearchText = _selectedItem.Name;
+                    FoundItems.Clear();
                     _isUpdating = false;
                 }
                 OnPropertyChanged(); 
@@ -75,57 +73,79 @@ namespace BarInventoryApp.ViewModels
         }
 
         public ICommand AddItemCommand { get; }
+        public ICommand RemoveItemCommand { get; }
         public ICommand ProcessCommand { get; }
         public ICommand CancelCommand { get; }
 
         public event Action? CloseRequested;
 
-        public CreateReceiptViewModel(IngredientService ingredientService, ReceiptService receiptService)
+        public CreateReceiptViewModel(IngredientService ingredientService, ReceiptService receiptService, CocktailService cocktailService)
         {
             _ingredientService = ingredientService;
             _receiptService = receiptService;
+            _cocktailService = cocktailService;
 
             AddItemCommand = new RelayCommand(OnAddItem);
+            RemoveItemCommand = new RelayCommand<ReceiptItemViewModel>(OnRemoveItem);
             ProcessCommand = new RelayCommand(OnProcess);
             CancelCommand = new RelayCommand(OnCancel);
         }
 
-        private async void SearchIngredients()
+        private void OnRemoveItem(ReceiptItemViewModel? item)
+        {
+            if (item != null) ReceiptItems.Remove(item);
+        }
+
+        private async void SearchItems()
         {
             if (string.IsNullOrWhiteSpace(SearchText))
             {
-                FoundIngredients.Clear();
+                FoundItems.Clear();
                 return;
             }
 
-            var results = await _ingredientService.SearchAsync(SearchText);
+            var ingredientResults = await _ingredientService.SearchAsync(SearchText);
+            var cocktailResults = await _cocktailService.SearchAsync(SearchText);
             
             if (!_isUpdating)
             {
-                FoundIngredients.Clear();
-                foreach (var item in results)
+                FoundItems.Clear();
+                foreach (var item in ingredientResults)
                 {
-                    FoundIngredients.Add(item);
+                    FoundItems.Add(new SearchItem 
+                    { 
+                        IngredientId = item.Id, 
+                        Name = item.Name, 
+                        Type = "Ингредиент", 
+                        Unit = item.Unit,
+                        AvailableQuantity = item.Quantity
+                    });
+                }
+                foreach (var item in cocktailResults)
+                {
+                    FoundItems.Add(new SearchItem 
+                    { 
+                        CocktailId = item.Id, 
+                        Name = item.Name, 
+                        Type = "Коктейль", 
+                        Unit = "шт.",
+                        AvailableQuantity = 999 // Для коктейлей проверка будет при списании
+                    });
                 }
             }
         }
 
         private async void OnAddItem()
         {
-            // Если объект все еще null, пробуем найти его в базе по точному имени (последний шанс)
-            if (SelectedIngredient == null && !string.IsNullOrWhiteSpace(SearchText))
+            if (SelectedItem == null && !string.IsNullOrWhiteSpace(SearchText))
             {
-                var searchResults = await _ingredientService.SearchAsync(SearchText);
-                var exactMatch = searchResults.FirstOrDefault(i => i.Name.Equals(SearchText, StringComparison.OrdinalIgnoreCase));
-                if (exactMatch != null)
-                {
-                    SelectedIngredient = exactMatch;
-                }
+                SearchItems(); // Повторный поиск если нужно
+                SelectedItem = FoundItems.FirstOrDefault(i => i.Name.Equals(SearchText, StringComparison.OrdinalIgnoreCase));
             }
 
-            if (SelectedIngredient == null)
+            if (SelectedItem == null)
             {
-                MessageBox.Show("Выберите ингредиент из списка.");
+                MessageBox.Show("Выберите позицию из списка.");
                 return;
             }
 
@@ -135,27 +155,27 @@ namespace BarInventoryApp.ViewModels
                 return;
             }
 
-            if (SelectedIngredient.Quantity < Quantity)
+            if (SelectedItem.IngredientId.HasValue && SelectedItem.AvailableQuantity < Quantity)
             {
-                MessageBox.Show($"Недостаточно ингредиента на остатке. Имеется: {SelectedIngredient.Quantity}");
+                MessageBox.Show($"Недостаточно ингредиента на остатке. Имеется: {SelectedItem.AvailableQuantity}");
                 return;
             }
 
             ReceiptItems.Add(new ReceiptItemViewModel
             {
-                IngredientId = SelectedIngredient.Id,
-                IngredientName = SelectedIngredient.Name,
+                IngredientId = SelectedItem.IngredientId,
+                CocktailId = SelectedItem.CocktailId,
+                Name = SelectedItem.Name,
                 Quantity = Quantity,
-                Unit = SelectedIngredient.Unit
+                Unit = SelectedItem.Unit
             });
 
-            // Сброс полей
             _isUpdating = true;
             SearchText = string.Empty;
             Quantity = 0;
-            _selectedIngredient = null;
-            OnPropertyChanged(nameof(SelectedIngredient));
-            FoundIngredients.Clear();
+            _selectedItem = null;
+            OnPropertyChanged(nameof(SelectedItem));
+            FoundItems.Clear();
             _isUpdating = false;
         }
 
@@ -163,14 +183,14 @@ namespace BarInventoryApp.ViewModels
         {
             if (ReceiptItems.Count == 0)
             {
-                MessageBox.Show("Добавьте хотя бы один ингредиент в чек.");
+                MessageBox.Show("Добавьте хотя бы одну позицию в чек.");
                 return;
             }
 
             try
             {
                 var userId = Session.CurrentUser!.Id;
-                var items = ReceiptItems.Select(ri => (ri.IngredientId, ri.Quantity)).ToList();
+                var items = ReceiptItems.Select(ri => (ri.IngredientId, ri.CocktailId, ri.Quantity)).ToList();
 
                 await _receiptService.CreateReceiptAsync(userId, items);
                 MessageBox.Show("Чек успешно проведен.");
@@ -194,10 +214,22 @@ namespace BarInventoryApp.ViewModels
         }
     }
 
+    public class SearchItem
+    {
+        public int? IngredientId { get; set; }
+        public int? CocktailId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string Unit { get; set; } = string.Empty;
+        public decimal AvailableQuantity { get; set; }
+        public override string ToString() => $"{Name} ({Type})";
+    }
+
     public class ReceiptItemViewModel
     {
-        public int IngredientId { get; set; }
-        public string IngredientName { get; set; } = string.Empty;
+        public int? IngredientId { get; set; }
+        public int? CocktailId { get; set; }
+        public string Name { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
         public string Unit { get; set; } = string.Empty;
     }

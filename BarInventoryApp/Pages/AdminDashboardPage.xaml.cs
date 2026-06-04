@@ -25,6 +25,11 @@ namespace BarInventoryApp.Pages
             _mainViewModel.NavigateTo<OrdersPage>();
         }
 
+        private void OnCocktailsClick(object sender, RoutedEventArgs e)
+        {
+            _mainViewModel.NavigateTo<CocktailsPage>();
+        }
+
         private void OnUsersClick(object sender, RoutedEventArgs e)
         {
             _mainViewModel.NavigateTo<UserPage>();

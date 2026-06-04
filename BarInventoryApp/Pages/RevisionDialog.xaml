@@ -1,0 +1,80 @@
+<Window x:Class="BarInventoryApp.Pages.RevisionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Ревизия ингредиентов" Height="600" Width="1000"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BackgroundBrush}">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="🔍 Ревизия (Инвентаризация)" 
+                       Style="{StaticResource PageTitle}" 
+                       FontSize="22"
+                       HorizontalAlignment="Left"/>
+            <Button Content="📊 Экспорт в Excel" 
+                    Command="{Binding ExportCommand}"
+                    Style="{StaticResource SecondaryButton}"
+                    HorizontalAlignment="Right"
+                    Padding="16,8"/>
+        </Grid>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="0">
+            <DataGrid ItemsSource="{Binding Items}"
+                      Style="{StaticResource ModernDataGrid}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="НАИМЕНОВАНИЕ" Binding="{Binding Name}" Width="*" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="СИСТЕМА" Binding="{Binding SystemQuantity, StringFormat=N3}" Width="120" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="ЕД.ИЗМ." Binding="{Binding Unit}" Width="80" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="ФАКТ" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding ActualQuantity, UpdateSourceTrigger=PropertyChanged, StringFormat=N3}" 
+                                         Style="{StaticResource ModernTextBox}"
+                                         IsEnabled="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"
+                                         Padding="8,4" Height="Auto" Margin="2"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="РАСХОЖДЕНИЕ" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Discrepancy, StringFormat=N3}" 
+                                           FontWeight="Bold"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Center"
+                                           Foreground="{Binding DiscrepancyColor}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+            <Button Content="Отмена" Click="Cancel_Click" 
+                    Style="{StaticResource SecondaryButton}"
+                    Padding="24,12" Margin="0,0,12,0"/>
+            <Button Content="Сохранить" Command="{Binding SaveCommand}"
+                    Style="{StaticResource PrimaryButton}"
+                    Padding="24,12" Margin="0,0,12,0"
+                    IsEnabled="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"/>
+            <Button Content="Провести" Command="{Binding ProcessCommand}"
+                    Style="{StaticResource PrimaryButton}"
+                    Background="#2ECC71"
+                    BorderBrush="#27AE60"
+                    Padding="24,12"
+                    IsEnabled="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"/>
+        </StackPanel>
+    </Grid>
+</Window>

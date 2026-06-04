@@ -20,15 +20,20 @@
                       IsReadOnly="True"
                       Style="{StaticResource ModernDataGrid}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ИНГРЕДИЕНТ" Binding="{Binding Ingredient.Name}" Width="*"/>
+                    <DataGridTextColumn Header="НАИМЕНОВАНИЕ" Binding="{Binding DisplayName}" Width="*"/>
                     <DataGridTextColumn Header="КОЛИЧЕСТВО" Binding="{Binding Quantity}" Width="120"/>
-                    <DataGridTextColumn Header="ЕД. ИЗМ." Binding="{Binding Ingredient.Unit}" Width="80"/>
+                    <DataGridTextColumn Header="ЕД. ИЗМ." Binding="{Binding DisplayUnit}" Width="80"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
 
-        <Button Grid.Row="2" Content="Закрыть" Click="OnCloseClick"
-                Style="{StaticResource SecondaryButton}" 
-                Width="120" HorizontalAlignment="Right"/>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="📥 Экспорт в Excel" Command="{Binding ExportToExcelCommand}"
+                    Style="{StaticResource PrimaryButton}" 
+                    Width="160" Margin="0,0,10,0"/>
+            <Button Content="Закрыть" Click="OnCloseClick"
+                    Style="{StaticResource SecondaryButton}" 
+                    Width="120"/>
+        </StackPanel>
     </Grid>
 </Window>

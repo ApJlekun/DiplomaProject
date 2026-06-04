@@ -65,6 +65,26 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<ReceiptItem> ReceiptItems { get; set; }
 
     /// <summary>
+    /// Набор данных коктейлей.
+    /// </summary>
+    public virtual DbSet<Cocktail> Cocktails { get; set; }
+
+    /// <summary>
+    /// Набор данных ингредиентов коктейлей.
+    /// </summary>
+    public virtual DbSet<CocktailIngredient> CocktailIngredients { get; set; }
+
+    /// <summary>
+    /// Набор данных ревизий.
+    /// </summary>
+    public virtual DbSet<Revision> Revisions { get; set; }
+
+    /// <summary>
+    /// Набор данных позиций ревизий.
+    /// </summary>
+    public virtual DbSet<RevisionItem> RevisionItems { get; set; }
+
+    /// <summary>
     /// Настройка подключения к базе данных.
     /// Используется только если контекст создан без параметров конфигурации.
     /// В продакшене рекомендуется всегда использовать параметры конфигурации из DI контейнера.
@@ -192,6 +212,38 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.IngredientId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ReceiptItems_Ingredients");
+        });
+
+        // Конфигурация сущности Revision
+        modelBuilder.Entity<Revision>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Status).HasMaxLength(50);
+
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.CreatedByUserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Revisions_Users");
+        });
+
+        // Конфигурация сущности RevisionItem
+        modelBuilder.Entity<RevisionItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SystemQuantity).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.ActualQuantity).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Discrepancy).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.Revision).WithMany(p => p.RevisionItems)
+                .HasForeignKey(d => d.RevisionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_RevisionItems_Revisions");
+
+            entity.HasOne(d => d.Ingredient).WithMany()
+                .HasForeignKey(d => d.IngredientId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RevisionItems_Ingredients");
         });
 
         OnModelCreatingPartial(modelBuilder);

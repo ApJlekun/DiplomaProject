@@ -21,12 +21,18 @@ public class IngredientsViewModel : INotifyPropertyChanged
 
     private readonly IngredientService _service;
     private readonly ReceiptService _receiptService;
+    private readonly CocktailService _cocktailService;
     private readonly MainViewModel _mainViewModel;
     private readonly IServiceProvider _serviceProvider;
     private readonly ExcelImportService _importService;
+    private readonly RevisionService _revisionService;
+    private readonly ExcelExportService _excelService;
     private string _filter = string.Empty;
     private List<Category> _allCategories = new();
     private Category? _selectedCategory;
+    private Ingredient? _selectedSearchIngredient;
+    private Ingredient? _selectedIngredient;
+    private bool _isSearchDropDownOpen;
 
     #endregion
 
@@ -38,12 +44,72 @@ public class IngredientsViewModel : INotifyPropertyChanged
     public ObservableCollection<Category> Categories { get; } = new();
 
     /// <summary>
-    /// Текст фильтра для поиска категорий.
+    /// Коллекция найденных ингредиентов для выпадающего списка поиска.
+    /// </summary>
+    public ObservableCollection<Ingredient> FilteredIngredients { get; } = new();
+
+    /// <summary>
+    /// Текст фильтра для поиска ингредиентов.
     /// </summary>
     public string Filter
     {
         get => _filter;
-        set { _filter = value; OnPropertyChanged(); ApplyFilter(); }
+        set 
+        { 
+            if (_filter == value) return;
+            _filter = value; 
+
+            ApplyIngredientFilter();
+
+            // Просто устанавливаем флаг открытия. 
+            // Обработчик OnSearchTextChanged в code-behind позаботится о курсоре.
+            IsSearchDropDownOpen = FilteredIngredients.Count > 0 && !string.IsNullOrEmpty(value);
+        }
+    }
+
+    /// <summary>
+    /// Состояние выпадающего списка поиска.
+    /// </summary>
+    public bool IsSearchDropDownOpen
+    {
+        get => _isSearchDropDownOpen;
+        set 
+        { 
+            if (_isSearchDropDownOpen == value) return;
+            _isSearchDropDownOpen = value; 
+            OnPropertyChanged(); 
+        }
+    }
+
+    /// <summary>
+    /// Выбранный ингредиент из результатов поиска.
+    /// </summary>
+    public Ingredient? SelectedSearchIngredient
+    {
+        get => _selectedSearchIngredient;
+        set
+        {
+            if (_selectedSearchIngredient == value) return;
+            _selectedSearchIngredient = value;
+            OnPropertyChanged();
+
+            if (_selectedSearchIngredient != null)
+            {
+                FocusOnIngredient(_selectedSearchIngredient);
+                IsSearchDropDownOpen = false;
+                _filter = string.Empty;
+                OnPropertyChanged(nameof(Filter));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Выбранный ингредиент в раскрытом списке категории.
+    /// </summary>
+    public Ingredient? SelectedIngredient
+    {
+        get => _selectedIngredient;
+        set { _selectedIngredient = value; OnPropertyChanged(); }
     }
 
     /// <summary>
@@ -65,19 +131,24 @@ public class IngredientsViewModel : INotifyPropertyChanged
     public ICommand? ImportCommand { get; }
     public ICommand? CreateReceiptCommand { get; }
     public ICommand? ReceiptHistoryCommand { get; }
-    public ICommand? OpenCategoryCommand { get; }
+    public ICommand? RevisionCommand { get; }
+    public ICommand? RevisionHistoryCommand { get; }
+    public ICommand LowStockCommand { get; }
 
     #endregion
 
     #region Конструктор
 
-    public IngredientsViewModel(IngredientService service, ReceiptService receiptService, MainViewModel mainViewModel, IServiceProvider serviceProvider, ExcelImportService importService)
+    public IngredientsViewModel(IngredientService service, ReceiptService receiptService, CocktailService cocktailService, MainViewModel mainViewModel, IServiceProvider serviceProvider, ExcelImportService importService, RevisionService revisionService, ExcelExportService excelService)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _receiptService = receiptService ?? throw new ArgumentNullException(nameof(receiptService));
+        _cocktailService = cocktailService ?? throw new ArgumentNullException(nameof(cocktailService));
         _mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _importService = importService ?? throw new ArgumentNullException(nameof(importService));
+        _revisionService = revisionService ?? throw new ArgumentNullException(nameof(revisionService));
+        _excelService = excelService ?? throw new ArgumentNullException(nameof(excelService));
 
         var role = Session.CurrentUser?.Role.Name;
         bool isManagerOrAdmin = role == ApplicationConstants.Roles.Admin || role == ApplicationConstants.Roles.Manager;
@@ -85,8 +156,6 @@ public class IngredientsViewModel : INotifyPropertyChanged
         if (role == ApplicationConstants.Roles.Admin)
         {
             AddCommand = new RelayCommand(OnAdd);
-            EditCommand = new RelayCommand(OnEdit);
-            DeleteCommand = new RelayCommand(OnDelete);
             ImportCommand = new RelayCommand(OnImport);
         }
 
@@ -94,9 +163,13 @@ public class IngredientsViewModel : INotifyPropertyChanged
         {
             CreateReceiptCommand = new RelayCommand(OnCreateReceipt);
             ReceiptHistoryCommand = new RelayCommand(OnReceiptHistory);
+            DeleteCommand = new RelayCommand<Ingredient>(OnDeleteIngredient);
+            EditCommand = new RelayCommand<Ingredient>(OnEditIngredient);
+            RevisionCommand = new RelayCommand(OnRevision);
+            RevisionHistoryCommand = new RelayCommand(OnRevisionHistory);
         }
 
-        OpenCategoryCommand = new RelayCommand(OnOpenCategory);
+        LowStockCommand = new RelayCommand(OnLowStock);
 
         LoadData();
     }
@@ -107,10 +180,30 @@ public class IngredientsViewModel : INotifyPropertyChanged
 
     private async void LoadData()
     {
+        // Запоминаем текущий выбор, чтобы восстановить его после обновления
+        int? selectedCategoryId = SelectedCategory?.Id;
+        int? selectedIngredientId = SelectedIngredient?.Id;
+
         try
         {
             _allCategories = await _service.GetCategoriesAsync();
             ApplyFilter();
+
+            // Восстанавливаем выбор категории (это раскроет её список)
+            if (selectedCategoryId.HasValue)
+            {
+                var categoryToRestore = Categories.FirstOrDefault(c => c.Id == selectedCategoryId.Value);
+                if (categoryToRestore != null)
+                {
+                    SelectedCategory = categoryToRestore;
+
+                    // Если возможно, восстанавливаем и выбор конкретного ингредиента
+                    if (selectedIngredientId.HasValue)
+                    {
+                        SelectedIngredient = SelectedCategory.Ingredients.FirstOrDefault(i => i.Id == selectedIngredientId.Value);
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -120,37 +213,46 @@ public class IngredientsViewModel : INotifyPropertyChanged
 
     private void ApplyFilter()
     {
-        var filtered = _allCategories
-            .Where(c => string.IsNullOrEmpty(Filter) ||
-                        c.Name.Contains(Filter, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
         Categories.Clear();
-        foreach (var category in filtered)
+        foreach (var category in _allCategories)
         {
             Categories.Add(category);
         }
     }
 
-    private async void OnOpenCategory()
+    private void ApplyIngredientFilter()
     {
-        if (SelectedCategory == null) return;
+        FilteredIngredients.Clear();
+        if (string.IsNullOrWhiteSpace(Filter)) return;
 
-        // Загружаем ингредиенты этой категории
-        var allIngredients = await _service.GetAllAsync();
-        var categoryIngredients = allIngredients.Where(i => i.CategoryId == SelectedCategory.Id).ToList();
+        var matches = _allCategories
+            .SelectMany(c => c.Ingredients)
+            .Where(i => i.Name.Contains(Filter, StringComparison.OrdinalIgnoreCase))
+            .Take(10)
+            .ToList();
 
-        var viewModel = new CategoryIngredientsViewModel(SelectedCategory.Name, categoryIngredients);
-        var dialog = new CategoryIngredientsDialog(viewModel);
-        dialog.ShowDialog();
+        foreach (var ingredient in matches)
+        {
+            FilteredIngredients.Add(ingredient);
+        }
+    }
+
+    private void FocusOnIngredient(Ingredient ingredient)
+    {
+        var category = Categories.FirstOrDefault(c => c.Id == ingredient.CategoryId);
+        if (category != null)
+        {
+            SelectedCategory = category;
+            SelectedIngredient = ingredient;
+        }
     }
 
     private void OnCreateReceipt()
     {
-        var viewModel = new CreateReceiptViewModel(_service, _receiptService);
+        var viewModel = new CreateReceiptViewModel(_service, _receiptService, _cocktailService);
         var dialog = new CreateReceiptDialog(viewModel);
         dialog.ShowDialog();
-        LoadData(); // На всякий случай обновляем (хотя количество в диалоге категории)
+        LoadData();
     }
 
     private void OnReceiptHistory()
@@ -160,22 +262,79 @@ public class IngredientsViewModel : INotifyPropertyChanged
         dialog.ShowDialog();
     }
 
+    private void OnRevision()
+    {
+        var viewModel = new RevisionViewModel(_revisionService, _service, _excelService);
+        var dialog = new RevisionDialog(viewModel);
+        dialog.ShowDialog();
+        LoadData();
+    }
+
+    private void OnRevisionHistory()
+    {
+        var viewModel = new RevisionHistoryViewModel(_revisionService, _service, _excelService, _serviceProvider);
+        var dialog = new RevisionHistoryDialog(viewModel);
+        dialog.ShowDialog();
+        LoadData();
+    }
+
+    private void OnLowStock()
+    {
+        var viewModel = new LowStockIngredientsViewModel(_service);
+        var dialog = new LowStockIngredientsDialog(viewModel);
+        dialog.ShowDialog();
+        LoadData();
+    }
     private void OnAdd()
     {
         var dialog = new IngredientEditDialog(null, _service);
         if (dialog.ShowDialog() == true) LoadData();
     }
 
+    private void OnEditIngredient(Ingredient? ingredient)
+    {
+        if (ingredient == null)
+        {
+            MessageBox.Show("Выберите ингредиент для редактирования.", "Информация", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new IngredientEditDialog(ingredient, _service);
+        if (dialog.ShowDialog() == true)
+        {
+            LoadData();
+        }
+    }
+
     private void OnEdit()
     {
-        MessageBox.Show("Для редактирования ингредиента откройте соответствующую категорию двойным кликом (функционал в разработке) или используйте поиск.");
-        // В текущей реализации по категориям редактирование усложнено, 
-        // обычно оно делается через поиск или внутри списка категории.
+        MessageBox.Show("Для редактирования ингредиента откройте соответствующую категорию и используйте поиск.");
+    }
+
+    private async void OnDeleteIngredient(Ingredient ingredient)
+    {
+        if (ingredient == null) return;
+
+        var result = MessageBox.Show($"Вы уверены, что хотите удалить ингредиент \"{ingredient.Name}\"?", 
+            "Подтверждение удаления", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                await _service.DeleteAsync(ingredient.Id);
+                LoadData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при удалении: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 
     private void OnDelete()
     {
-        MessageBox.Show("Удаление ингредиентов производится из списка внутри категории.");
+        // Старый метод без параметров, заменен на OnDeleteIngredient
     }
 
     private async void OnImport()

@@ -34,6 +34,12 @@
                     Click="OnOrdersClick" 
                     Style="{StaticResource PrimaryButton}"
                     HorizontalAlignment="Stretch"
+                    Margin="0,0,0,12" 
+                    Padding="16,14"/>
+            <Button Content="🍹  Коктейли" 
+                    Click="OnCocktailsClick" 
+                    Style="{StaticResource PrimaryButton}"
+                    HorizontalAlignment="Stretch"
                     Padding="16,14"/>
         </StackPanel>
     </Grid>

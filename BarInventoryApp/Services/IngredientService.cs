@@ -45,7 +45,7 @@ public class IngredientService
     /// <returns>Список всех категорий.</returns>
     public async Task<List<Category>> GetCategoriesAsync()
     {
-        return await _context.Categories.ToListAsync();
+        return await _context.Categories.Include(c => c.Ingredients).ToListAsync();
     }
 
     /// <summary>

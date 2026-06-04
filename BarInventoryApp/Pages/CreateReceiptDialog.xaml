@@ -29,16 +29,16 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Margin="0,0,10,0">
-                    <TextBlock Text="Ингредиент" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="Ингредиент или Коктейль" Style="{StaticResource FieldLabel}"/>
                     <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
                              Style="{StaticResource ModernTextBox}"/>
-                    <ListBox ItemsSource="{Binding FoundIngredients}" 
-                             SelectedItem="{Binding SelectedIngredient}"
+                    <ListBox ItemsSource="{Binding FoundItems}" 
+                             SelectedItem="{Binding SelectedItem}"
                              MaxHeight="100" Margin="0,5,0,0"
-                             Visibility="{Binding FoundIngredients.Count, Converter={StaticResource NullToVisibilityConverter}}">
+                             Visibility="{Binding FoundItems.Count, Converter={StaticResource NullToVisibilityConverter}}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Name}"/>
+                                <TextBlock Text="{Binding .}"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -64,9 +64,17 @@
                       IsReadOnly="True"
                       Style="{StaticResource ModernDataGrid}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ИНГРЕДИЕНТ" Binding="{Binding IngredientName}" Width="*"/>
+                    <DataGridTextColumn Header="НАИМЕНОВАНИЕ" Binding="{Binding Name}" Width="*"/>
                     <DataGridTextColumn Header="КОЛИЧЕСТВО" Binding="{Binding Quantity}" Width="120"/>
                     <DataGridTextColumn Header="ЕД. ИЗМ." Binding="{Binding Unit}" Width="80"/>
+                    <DataGridTemplateColumn Width="50">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="🗑" Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                        CommandParameter="{Binding}" Style="{StaticResource IconButton}" Foreground="Red"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

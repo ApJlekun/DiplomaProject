@@ -6,7 +6,9 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
+using System.Linq;
 
 namespace BarInventoryApp.ViewModels
 {
@@ -50,7 +52,8 @@ namespace BarInventoryApp.ViewModels
         {
             if (SelectedReceipt == null) return;
 
-            var detailsViewModel = new ReceiptDetailsViewModel(SelectedReceipt.Id, _receiptService);
+            var excelService = App.ServiceProvider.GetService(typeof(ExcelExportService)) as ExcelExportService;
+            var detailsViewModel = new ReceiptDetailsViewModel(SelectedReceipt.Id, _receiptService, excelService!);
             var dialog = new ReceiptDetailsDialog(detailsViewModel);
             dialog.ShowDialog();
         }

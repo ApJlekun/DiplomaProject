@@ -45,6 +45,9 @@ namespace BarInventoryApp
                     services.AddTransient<ManagerDashboardPage>();
                     services.AddTransient<AdminDashboardPage>();
 
+                    services.AddTransient<CocktailsPage>();
+                    services.AddTransient<CocktailsViewModel>();
+
                     services.AddScoped<AuthService>();
                     services.AddScoped<IngredientService>();
                     services.AddScoped<InvoiceService>();
@@ -52,7 +55,9 @@ namespace BarInventoryApp
                     services.AddScoped<ExcelExportService>();
                     services.AddScoped<ExcelImportService>();
                     services.AddScoped<ReceiptService>();
+                    services.AddScoped<CocktailService>();
                     services.AddScoped<EmailService>();
+                    services.AddScoped<RevisionService>();
 
                     services.AddDbContext<AppDbContext>(options =>
                         options.UseSqlServer(context.Configuration.GetConnectionString("DefaultConnection")));

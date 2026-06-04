@@ -34,18 +34,29 @@
         <Border Grid.Row="1" Style="{StaticResource Card}" Padding="16" Margin="0,0,0,16">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                    <ComboBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" 
-                              ItemsSource="{Binding Categories}"
+                    <ComboBox x:Name="SearchComboBox"
+                              Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" 
+                              ItemsSource="{Binding FilteredIngredients}"
+                              SelectedItem="{Binding SelectedSearchIngredient, Mode=TwoWay}"
+                              IsDropDownOpen="{Binding IsSearchDropDownOpen}"
                               DisplayMemberPath="Name"
                               IsEditable="True"
                               StaysOpenOnEdit="True"
                               IsTextSearchEnabled="False"
+                              TextBoxBase.TextChanged="OnSearchTextChanged"
                               Width="300"
-                              Height="35"
+                              Height="40"
+                              Padding="10,5"
                               FontSize="14"
                               Style="{StaticResource ModernComboBox}"
-                              VerticalContentAlignment="Center"/>
-                    <TextBlock Text="🔍 Поиск категорий" VerticalAlignment="Center" Margin="10,0,0,0" 
+                              VerticalContentAlignment="Center">
+                        <ComboBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ComboBox.ItemsPanel>
+                    </ComboBox>
+                    <TextBlock Text="🔍 Поиск ингредиентов" VerticalAlignment="Center" Margin="10,0,0,0" 
                                FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
                 
@@ -66,22 +77,80 @@
                             Style="{StaticResource SecondaryButton}"
                             Margin="0,0,8,0" Padding="16,10"
                             Visibility="{Binding ImportCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <Button Content="🔍 Ревизия" Command="{Binding RevisionCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Background="#9B59B6" BorderBrush="#8E44AD"
+                            Margin="0,0,8,0" Padding="16,10"
+                            Visibility="{Binding RevisionCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <Button Content="📜 История ревизий" Command="{Binding RevisionHistoryCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="0,0,8,0" Padding="16,10"
+                            Visibility="{Binding RevisionHistoryCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <Button Content="⚠️ Низкий остаток" Command="{Binding LowStockCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Background="#E67E22" BorderBrush="#D35400"
+                            Margin="0,0,8,0" Padding="16,10"/>
                 </StackPanel>
             </StackPanel>
         </Border>
 
         <!-- Таблица категорий -->
         <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0">
-            <DataGrid ItemsSource="{Binding Categories}"
+            <DataGrid x:Name="CategoriesGrid"
+                      ItemsSource="{Binding Categories}"
                       SelectedItem="{Binding SelectedCategory}"
                       Style="{StaticResource ModernDataGrid}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       BorderThickness="0"
-                      MouseDoubleClick="OnMouseDoubleClick">
+                      RowHeight="NaN"
+                      MinRowHeight="44"
+                      RowDetailsVisibilityMode="VisibleWhenSelected"
+                      PreviewMouseLeftButtonDown="OnDataGridPreviewMouseDown">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="КАТЕГОРИЯ" Binding="{Binding Name}" Width="*"/>
+                    <DataGridTextColumn Header="КАТЕГОРИЯ" Binding="{Binding Name}" Width="*" FontWeight="Bold"/>
                 </DataGrid.Columns>
+                <DataGrid.RowDetailsTemplate>
+                    <DataTemplate>
+                        <Border Background="Transparent" 
+                                Padding="40,10,20,20" 
+                                BorderBrush="{DynamicResource BorderBrush}" 
+                                BorderThickness="0,1,0,0"
+                                MaxWidth="{Binding Path=ActualWidth, RelativeSource={RelativeSource AncestorType=DataGrid}}">
+                            <DataGrid ItemsSource="{Binding Ingredients}"
+                                      SelectedItem="{Binding DataContext.SelectedIngredient, RelativeSource={RelativeSource AncestorType=Page}}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      HeadersVisibility="Column"
+                                      GridLinesVisibility="None"
+                                      SelectionMode="Single"
+                                      MaxHeight="300"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      RowHeight="35"
+                                      PreviewMouseLeftButtonUp="OnIngredientLeftClick"
+                                      PreviewMouseRightButtonUp="OnIngredientRightClick">
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu x:Name="IngredientMenu">
+                                        <MenuItem Header="Изменить" 
+                                                  Command="{Binding EditCommand}"
+                                                  CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"/>
+                                        <MenuItem Header="Удалить" 
+                                                  Command="{Binding DeleteCommand}"
+                                                  CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"/>
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Наименование" Binding="{Binding Name}" Width="*" MinWidth="200"/>
+                                    <DataGridTextColumn Header="Количество" Binding="{Binding Quantity, StringFormat=N3}" Width="100"/>
+                                    <DataGridTextColumn Header="Ед.изм." Binding="{Binding Unit}" Width="80"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+                    </DataTemplate>
+                </DataGrid.RowDetailsTemplate>
             </DataGrid>
         </Border>
     </Grid>
