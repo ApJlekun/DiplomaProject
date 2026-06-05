@@ -33,6 +33,7 @@ public class IngredientsViewModel : INotifyPropertyChanged
     private Ingredient? _selectedSearchIngredient;
     private Ingredient? _selectedIngredient;
     private bool _isSearchDropDownOpen;
+    private int _lowStockCount;
 
     #endregion
 
@@ -121,6 +122,15 @@ public class IngredientsViewModel : INotifyPropertyChanged
         set { _selectedCategory = value; OnPropertyChanged(); }
     }
 
+    /// <summary>
+    /// Количество ингредиентов с низким остатком (&lt; 10).
+    /// </summary>
+    public int LowStockCount
+    {
+        get => _lowStockCount;
+        set { if (_lowStockCount == value) return; _lowStockCount = value; OnPropertyChanged(); }
+    }
+
     #endregion
 
     #region Команды
@@ -188,6 +198,11 @@ public class IngredientsViewModel : INotifyPropertyChanged
         {
             _allCategories = await _service.GetCategoriesAsync();
             ApplyFilter();
+
+            // Обновляем счётчик низкого остатка
+            LowStockCount = _allCategories
+                .SelectMany(c => c.Ingredients)
+                .Count(i => i.Quantity < 10);
 
             // Восстанавливаем выбор категории (это раскроет её список)
             if (selectedCategoryId.HasValue)

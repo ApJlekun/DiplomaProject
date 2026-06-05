@@ -1,4 +1,4 @@
-﻿<Page x:Class="BarInventoryApp.Pages.IngredientsPage"
+<Page x:Class="BarInventoryApp.Pages.IngredientsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -59,7 +59,7 @@
                     <TextBlock Text="🔍 Поиск ингредиентов" VerticalAlignment="Center" Margin="10,0,0,0" 
                                FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
-                
+
                 <StackPanel Orientation="Horizontal">
                     <Button Content="🧾 Чек" Command="{Binding CreateReceiptCommand}"
                             Style="{StaticResource PrimaryButton}"
@@ -79,17 +79,23 @@
                             Visibility="{Binding ImportCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
                     <Button Content="🔍 Ревизия" Command="{Binding RevisionCommand}"
                             Style="{StaticResource PrimaryButton}"
-                            Background="#9B59B6" BorderBrush="#8E44AD"
                             Margin="0,0,8,0" Padding="16,10"
                             Visibility="{Binding RevisionCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
                     <Button Content="📜 История ревизий" Command="{Binding RevisionHistoryCommand}"
                             Style="{StaticResource SecondaryButton}"
                             Margin="0,0,8,0" Padding="16,10"
                             Visibility="{Binding RevisionHistoryCommand, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    <Button Content="⚠️ Низкий остаток" Command="{Binding LowStockCommand}"
-                            Style="{StaticResource PrimaryButton}"
-                            Background="#E67E22" BorderBrush="#D35400"
-                            Margin="0,0,8,0" Padding="16,10"/>
+                    <Button Command="{Binding LowStockCommand}"
+                            Style="{StaticResource DangerOutlineButton}"
+                            Margin="0,0,8,0" Padding="16,10">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚠️ Низкий остаток" FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding LowStockCount}" FontSize="14" FontWeight="Bold"
+                                       Foreground="{DynamicResource DangerBrush}" VerticalAlignment="Center"
+                                       Margin="6,0,0,0"
+                                       Visibility="{Binding LowStockCount, Converter={StaticResource PositiveIntToVisibilityConverter}}"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </StackPanel>
         </Border>
