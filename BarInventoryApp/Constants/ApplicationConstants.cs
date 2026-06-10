@@ -13,19 +13,31 @@ public static class ApplicationConstants
     public static class Roles
     {
         /// <summary>
-        /// Роль бармена - может просматривать остатки ингредиентов.
+        /// Роль бармена — просмотр остатков и оформление чеков.
         /// </summary>
         public const string Barmen = "Barmen";
 
         /// <summary>
-        /// Роль менеджера - может просматривать остатки, создавать и редактировать заказы, экспортировать данные.
+        /// Роль менеджера — полный доступ ко всем функциям, кроме управления пользователями.
         /// </summary>
         public const string Manager = "Manager";
 
         /// <summary>
-        /// Роль администратора - имеет полный доступ ко всем функциям.
+        /// Роль администратора — полный доступ ко всем функциям системы.
         /// </summary>
         public const string Admin = "Admin";
+
+        /// <summary>
+        /// Проверяет, является ли роль менеджером или администратором.
+        /// </summary>
+        public static bool IsManagerOrAdmin(string? roleName) =>
+            roleName is Manager or Admin;
+
+        /// <summary>
+        /// Проверяет, является ли роль администратором.
+        /// </summary>
+        public static bool IsAdmin(string? roleName) =>
+            roleName == Admin;
     }
 
     /// <summary>

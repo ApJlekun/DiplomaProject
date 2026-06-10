@@ -161,25 +161,22 @@ public class IngredientsViewModel : INotifyPropertyChanged
         _excelService = excelService ?? throw new ArgumentNullException(nameof(excelService));
 
         var role = Session.CurrentUser?.Role.Name;
-        bool isManagerOrAdmin = role == ApplicationConstants.Roles.Admin || role == ApplicationConstants.Roles.Manager;
 
-        if (role == ApplicationConstants.Roles.Admin)
+        // Бармен: просмотр остатков и оформление чеков
+        CreateReceiptCommand = new RelayCommand(OnCreateReceipt);
+        ReceiptHistoryCommand = new RelayCommand(OnReceiptHistory);
+        LowStockCommand = new RelayCommand(OnLowStock);
+
+        // Менеджер и администратор: полное управление ингредиентами и ревизиями
+        if (ApplicationConstants.Roles.IsManagerOrAdmin(role))
         {
             AddCommand = new RelayCommand(OnAdd);
             ImportCommand = new RelayCommand(OnImport);
-        }
-
-        if (isManagerOrAdmin)
-        {
-            CreateReceiptCommand = new RelayCommand(OnCreateReceipt);
-            ReceiptHistoryCommand = new RelayCommand(OnReceiptHistory);
             DeleteCommand = new RelayCommand<Ingredient>(OnDeleteIngredient);
             EditCommand = new RelayCommand<Ingredient>(OnEditIngredient);
             RevisionCommand = new RelayCommand(OnRevision);
             RevisionHistoryCommand = new RelayCommand(OnRevisionHistory);
         }
-
-        LowStockCommand = new RelayCommand(OnLowStock);
 
         LoadData();
     }

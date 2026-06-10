@@ -27,9 +27,9 @@ namespace BarInventoryApp.ViewModels
             set { _selectedCocktail = value; OnPropertyChanged(); }
         }
 
-        public ICommand AddCommand { get; }
-        public ICommand EditCommand { get; }
-        public ICommand DeleteCommand { get; }
+        public ICommand? AddCommand { get; }
+        public ICommand? EditCommand { get; }
+        public ICommand? DeleteCommand { get; }
         public ICommand BackCommand { get; }
 
         public CocktailsViewModel(CocktailService cocktailService, IngredientService ingredientService, MainViewModel mainViewModel)
@@ -38,9 +38,13 @@ namespace BarInventoryApp.ViewModels
             _ingredientService = ingredientService;
             _mainViewModel = mainViewModel;
 
-            AddCommand = new RelayCommand(OnAdd);
-            EditCommand = new RelayCommand(OnEdit);
-            DeleteCommand = new RelayCommand(OnDelete);
+            if (ApplicationConstants.Roles.IsManagerOrAdmin(Session.CurrentUser?.Role.Name))
+            {
+                AddCommand = new RelayCommand(OnAdd);
+                EditCommand = new RelayCommand(OnEdit);
+                DeleteCommand = new RelayCommand(OnDelete);
+            }
+
             BackCommand = new RelayCommand(OnBack);
 
             LoadCocktails();

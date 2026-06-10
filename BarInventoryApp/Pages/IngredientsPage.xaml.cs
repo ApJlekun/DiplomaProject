@@ -1,3 +1,4 @@
+using BarInventoryApp.Constants;
 using BarInventoryApp.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,13 +16,18 @@ namespace BarInventoryApp.Pages
             InitializeComponent();
             _viewModel = viewModel;
             DataContext = _viewModel;
+
+            if (Utils.Session.CurrentUser?.Role.Name == ApplicationConstants.Roles.Barmen)
+                BackButton.Visibility = Visibility.Collapsed;
         }
 
         private void OnBackClick(object sender, RoutedEventArgs e)
         {
             var role = Utils.Session.CurrentUser?.Role.Name;
-            if (role == "Admin") _viewModel.NavigateTo<AdminDashboardPage>();
-            else _viewModel.NavigateTo<ManagerDashboardPage>();
+            if (ApplicationConstants.Roles.IsAdmin(role))
+                _viewModel.NavigateTo<AdminDashboardPage>();
+            else if (role == ApplicationConstants.Roles.Manager)
+                _viewModel.NavigateTo<ManagerDashboardPage>();
         }
 
         private void OnLogoutClick(object sender, RoutedEventArgs e)
@@ -69,6 +75,9 @@ namespace BarInventoryApp.Pages
         {
             var grid = sender as DataGrid;
             if (grid == null) return;
+
+            if (Utils.Session.CurrentUser?.Role.Name == ApplicationConstants.Roles.Barmen)
+                return;
 
             var row = FindVisualParent<DataGridRow>((DependencyObject)e.OriginalSource);
             if (row != null)

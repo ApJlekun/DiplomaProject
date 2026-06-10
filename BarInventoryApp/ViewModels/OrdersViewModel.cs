@@ -38,14 +38,13 @@ namespace BarInventoryApp.ViewModels
             set { _searchQuery = value; OnPropertyChanged(); ApplyFilter(); }
         }
 
-        public bool IsManagerOrAdmin => Session.CurrentUser?.Role.Name == ApplicationConstants.Roles.Admin || 
-                                        Session.CurrentUser?.Role.Name == ApplicationConstants.Roles.Manager;
+        public bool IsManagerOrAdmin => ApplicationConstants.Roles.IsManagerOrAdmin(Session.CurrentUser?.Role.Name);
 
-        public ICommand AddCommand { get; }
-        public ICommand EditCommand { get; }
-        public ICommand DeleteCommand { get; }
+        public ICommand? AddCommand { get; }
+        public ICommand? EditCommand { get; }
+        public ICommand? DeleteCommand { get; }
         public ICommand BackCommand { get; }
-        public ICommand SendEmailCommand { get; }
+        public ICommand? SendEmailCommand { get; }
 
         public OrdersViewModel(InvoiceService invoiceService, IngredientService ingredientService, ExcelExportService excelService, EmailService emailService, MainViewModel mainViewModel)
         {
@@ -55,11 +54,15 @@ namespace BarInventoryApp.ViewModels
             _emailService = emailService;
             _mainViewModel = mainViewModel;
 
-            AddCommand = new RelayCommand(OnAdd);
-            EditCommand = new RelayCommand(OnEdit);
-            DeleteCommand = new RelayCommand(OnDelete);
+            if (IsManagerOrAdmin)
+            {
+                AddCommand = new RelayCommand(OnAdd);
+                EditCommand = new RelayCommand(OnEdit);
+                DeleteCommand = new RelayCommand(OnDelete);
+                SendEmailCommand = new RelayCommand(OnSendEmail);
+            }
+
             BackCommand = new RelayCommand(OnBack);
-            SendEmailCommand = new RelayCommand(OnSendEmail);
 
             LoadInvoices();
         }
